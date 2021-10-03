@@ -9,12 +9,17 @@
     "start": "react-native start"
   },
   "dependencies": {
+    "epub-constructor": "^1.0.2",
     "react": "16.13.1",
-    "react-native": "0.63.4"
+    "react-native": "0.63.4",
+    "react-native-fs": "^2.18.0",
+    "react-native-zip-archive": "^6.0.3",
+    "uuid": "^3.4.0" 
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",
     "@babel/runtime": "^7.12.5",
+    "@types/uuid": "^8.3.1",
     "babel-plugin-module-resolver": "^4.0.0",
     "metro-react-native-babel-preset": "^0.64.0"
   }

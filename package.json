@@ -1,48 +1,21 @@
 {
-  "name": "react-native-constructor",
+  "name": "react-native-epub-creator",
   "version": "0.1.0",
   "description": "epubBuilder",
-  "main": "lib/commonjs/index",
-  "module": "lib/module/index",
-  "types": "lib/typescript/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
-  "files": [
-    "src",
-    "lib",
-    "android",
-    "ios",
-    "cpp",
-    "react-native-constructor.podspec",
-    "!lib/typescript/example",
-    "!android/build",
-    "!ios/build",
-    "!**/__tests__",
-    "!**/__fixtures__",
-    "!**/__mocks__"
-  ],
-  "scripts": {
-    "test": "jest",
-    "typescript": "tsc --noEmit",
-    "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "prepare": "bob build",
-    "release": "release-it",
-    "example": "yarn --cwd example",
-    "pods": "cd example && pod-install --quiet",
-    "bootstrap": "yarn example && yarn && yarn pods"
-  },
+  "main": "index.tsx",
   "keywords": [
     "react-native",
-    "ios",
-    "android"
+    "epub",
+    "epub-creator",
+    "react-native-epub-creator"
   ],
-  "repository": "https://github.com/AlenToma/react-native-constructor",
+  "repository": "https://github.com/AlenToma/react-native-epub-creator",
   "author": "Alen Toma <alen.toma@gmail.com> (https://github.com/AlenToma)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/AlenToma/react-native-constructor/issues"
+    "url": "https://github.com/AlenToma/react-native-epub-creator/issues"
   },
-  "homepage": "https://github.com/AlenToma/react-native-constructor#readme",
+  "homepage": "https://github.com/AlenToma/react-native-epub-creator#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
@@ -71,18 +44,6 @@
     "react": "*",
     "react-native": "*"
   },
-  "jest": {
-    "preset": "react-native",
-    "modulePathIgnorePatterns": [
-      "<rootDir>/example/node_modules",
-      "<rootDir>/lib/"
-    ]
-  },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
   "release-it": {
     "git": {
       "commitMessage": "chore: release ${version}",
@@ -100,48 +61,13 @@
       }
     }
   },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "@react-native-community",
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": [
-        "error",
-        {
-          "quoteProps": "consistent",
-          "singleQuote": true,
-          "tabWidth": 2,
-          "trailingComma": "es5",
-          "useTabs": false
-        }
-      ]
-    }
-  },
   "eslintIgnore": [
     "node_modules/",
     "lib/"
   ],
-  "prettier": {
-    "quoteProps": "consistent",
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "es5",
-    "useTabs": false
-  },
-  "react-native-builder-bob": {
-    "source": "src",
-    "output": "lib",
-    "targets": [
-      "commonjs",
-      "module",
-      [
-        "typescript",
-        {
-          "project": "tsconfig.build.json"
-        }
-      ]
-    ]
+  "dependencies": {
+    "epub-constructor": "^1.0.2",
+    "react-native-zip-archive": "^6.0.3",
+    "uuid": "^3.4.0"
   }
 }

@@ -26,9 +26,13 @@ nothing to do
 
 ### Create and Epub
 ```js
+<<<<<<< Updated upstream
 import EpubBuilder from "react-native-epub-creator";
 // the library best work with react-native-fs but you could use your own library instead
 import * as RNFS from 'react-native-fs';
+=======
+import { ConstructorView } from "react-native-epub-creator";
+>>>>>>> Stashed changes
 
 // ...
    EpubBuilder.onProgress = (progress, file)=> {

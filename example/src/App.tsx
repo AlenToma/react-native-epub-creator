@@ -1,12 +1,46 @@
-import * as React from 'react';
-
-import { StyleSheet, View } from 'react-native';
-import { ConstructorView } from 'react-native-constructor';
+import React, { useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import EpubBuilder from '../EpubBuilder';
+import { MainBundlePath, DocumentDirectoryPath } from 'react-native-fs'
+import * as RNFS from 'react-native-fs';
 
 export default function App() {
+  const [path, setPath] = useState("");
+  const [progress, setProgress] = useState(0);
+  const createFile = async () => {
+    EpubBuilder.onProgress = (progress)=> {
+      setProgress(progress)
+    }
+    var epub = new EpubBuilder({
+      title: "example",
+      language: "en",
+      description: "this is a epub test",
+      stylesheet: {
+        p: {
+          width: "100%"
+        }
+      },
+      chapters: [{
+        title: "Air born",
+        htmlBody: "<p>this is chapter 1</p>"
+      }, {
+        title: "chapter 2",
+        htmlBody: "<p>this is chapter 1</p>"
+      }]
+    });
+    var p = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+    setPath(p);
+  }
+
   return (
     <View style={styles.container}>
-      <ConstructorViewManager color="#32a852" style={styles.box} />
+      <TouchableOpacity onPress={createFile}>
+        <Text>
+          create epub {progress}%
+          {"\n"}
+          {path}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
