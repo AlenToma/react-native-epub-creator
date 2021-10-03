@@ -1,7 +1,7 @@
 {
   "name": "react-native-epub-creator",
-  "version": "0.1.0",
-  "description": "epubBuilder",
+  "version": "1.0.1",
+  "description": "This react-native library create epub file for android and IOS",
   "main": "index.tsx",
   "keywords": [
     "react-native",
