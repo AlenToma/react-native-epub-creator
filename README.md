@@ -29,8 +29,7 @@ nothing to do
 import EpubBuilder from "react-native-epub-creator";
 // the library best work with react-native-fs but you could use your own library instead
 import * as RNFS from 'react-native-fs';
-import { ConstructorView } from "react-native-epub-creator";
-// ...
+
    EpubBuilder.onProgress = (progress, file)=> {
       setProgress(progress)
     }
