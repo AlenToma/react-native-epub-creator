@@ -1,0 +1,6 @@
+rootProject.name = 'ConstructorExample'
+apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
+include ':app'
+
+include ':reactnativeconstructor'
+project(':reactnativeconstructor').projectDir = new File(rootProject.projectDir, '../../android')
