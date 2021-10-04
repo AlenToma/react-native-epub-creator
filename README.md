@@ -36,11 +36,10 @@ nothing to do
 import EpubBuilder from "react-native-epub-creator";
 // the library best work with react-native-fs but you could use your own library instead
 import * as RNFS from 'react-native-fs';
-
+   const [progress, setProgress] = React.useState(0)
    EpubBuilder.onProgress = (progress, file)=> {
       setProgress(progress)
     }
-
      var epub = new EpubBuilder({
       title: "example",
       language: "en",
@@ -57,17 +56,20 @@ import * as RNFS from 'react-native-fs';
         title: "chapter 2",
         htmlBody: "<p>this is chapter 2</p>"
       }]
-    });
+    }, RNFS.DownloadDirectoryPath, RNFS);
     try{
-      await epub.prepare(); // this will create a temporary folder that will containe the epub files
-    
-      var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+      // this will create a temporary folder that will containe the epub files
+      await epub.prepare(); 
+      
+      // save and create the .epub file
+      var epubFilePath = await epub.save();
     }catch(error){
+     // remove the temp created folder
      await epub.discardChanges();
     }
 ```
 
-### Read Existing Epub file
+### Read an Existing Epub file
 ```js
   var path = RNFS.DownloadDirectoryPath +"/example.epub";
   var epub = EpubBuilder.loadEpub(path, RNFS);
@@ -77,8 +79,10 @@ import * as RNFS from 'react-native-fs';
         htmlBody: "<p>this is chapter 3</p>"
       });
     try{
-      var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+      // save and create the .epub file
+      var epubFilePath = await epub.save();
     }catch(error){
+     // remove the temp created folder
      await epub.discardChanges();
     }
  
