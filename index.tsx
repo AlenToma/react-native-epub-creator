@@ -54,55 +54,99 @@ const getFiles = async (folder: string, reader: FsSettings) => {
     return files;
 }
 
-class EpubBuilder {
-    public settings: EpubSettings;
-
+export default class EpubBuilder {
+    private settings: EpubSettings;
     static onProgress?: (progress: number, epubFile: string) => void;
+    private destinationFolderPath?: string;
+    private tempPath?: string;
+    private RNFS: FsSettings;
+    private dProgress: number = 0;
 
-    constructor(settings: EpubSettings) {
+    /*
+    destinationFolderPath: destination to the folder, You could use react-native-fs RNFS.DownloadDirectoryPath
+    */
+    constructor(settings: EpubSettings, destinationFolderPath: string, RNFS: FsSettings) {
         this.settings = settings;
+        this.destinationFolderPath = getFolderPath(destinationFolderPath);
+        this.RNFS = RNFS;
     }
 
-    async addChapter(epubChapter: EpubChapter) {
+    public getEpubSettings() {
+        return this.settings;
+    }
+
+    /*
+        This will prepare a temp folder that containe the data of the epub file.
+        the folder will be descarded when the epub file is created eg save() or discardChanges() 
+    */
+    public async prepare() {
+        await this.createTempFolder();
+        return this;
+    }
+    /*
+        discard all changes
+    */
+    public async discardChanges() {
+        try {
+            console.log("Removing:" + this.tempPath);
+            if (await this.RNFS.exists(this.tempPath))
+                await this.RNFS.unlink(this.tempPath);
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    /*
+        add a new Chapter
+    */
+    public async addChapter(epubChapter: EpubChapter) {
         this.settings.chapters.push(epubChapter);
+        await this.createTempFolder();
     }
-
 
     /*
     destinationFolderPath: destination to the folder, You could use react-native-fs RNFS.DownloadDirectoryPath
     RNFS: file reader settings best use with react-native-fs eg import * as RNFS from 'react-native-fs', or you could use your own filereder
     */
-    public async save(destinationFolderPath: string, RNFS: FsSettings) {
+    public async save() {
         const epub = new EpubFile(this.settings);
         const files = epub.constructEpub();
-        const downloadDirectoryPath = getFolderPath(destinationFolderPath);
-        const targetPath = `${downloadDirectoryPath}/${this.settings.title}.epub`
-        const temp = downloadDirectoryPath + "/" + uuidv4();
-        await validateDir(temp, RNFS);
-        var dProgress = 0;
+        const targetPath = `${this.destinationFolderPath}/${this.settings.title}.epub`
         var len = files.length + 1;
-        for (var i = 0; i < files.length; i++) {
-            const x = files[i];
-            dProgress = ((i / parseFloat(files.length.toString())) * 100)
-            var path = temp + "/" + x.path;
-            if (x.path.indexOf(".") != -1)
-                await validateDir(path, RNFS);
-            await RNFS.writeFile(path, x.content, "utf8");
-            EpubBuilder.onProgress?.(dProgress, destinationFolderPath)
-        }
-        try {
-            if (await RNFS.exists(targetPath))
-                await RNFS.unlink(targetPath);
 
+        await this.createTempFolder();
+        try {
+            if (await this.RNFS.exists(targetPath))
+                await this.RNFS.unlink(targetPath);
         } catch (error) {
             console.log("unable to delete the existing: " + targetPath)
         }
-
-        await zip(temp, targetPath);
-        await RNFS.unlink(temp);
-        dProgress = ((len / parseFloat(len.toString())) * 100);
-        EpubBuilder.onProgress?.(dProgress, destinationFolderPath)
+        await zip(this.tempPath, targetPath);
+        await this.discardChanges();
+        this.dProgress = ((len / parseFloat(len.toString())) * 100);
+        EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath)
         return targetPath;
+    }
+
+    private async createTempFolder() {
+        var overrideFiles = ["toc.ncx", "toc.html", ".opf"]
+        const epub = new EpubFile(this.settings);
+        const files = epub.constructEpub();
+        this.tempPath = this.tempPath ?? this.destinationFolderPath + "/" + uuidv4();
+        await validateDir(this.tempPath, this.RNFS);
+        this.dProgress = 0;
+        var len = files.length + 1;
+        for (var i = 0; i < files.length; i++) {
+            const x = files[i];
+            this.dProgress = ((i / parseFloat(len.toString())) * 100)
+            var path = this.tempPath + "/" + x.path;
+            if (overrideFiles.find(f => x.path.indexOf(f) != -1) && await this.RNFS.exists(path))
+                await this.RNFS.unlink(path);
+            if (x.path.indexOf(".") != -1)
+                await validateDir(path, this.RNFS);
+            if (!await this.RNFS.exists(path))
+                await this.RNFS.writeFile(path, x.content, "utf8");
+            EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath)
+        }
     }
 
     /*
@@ -121,7 +165,7 @@ class EpubBuilder {
         var dProgress = 0;
         for (var i = 0; i < files.length; i++) {
             var f = files[i];
-            dProgress = ((i / parseFloat(files.length.toString())) * 100)
+            dProgress = ((i / parseFloat(len.toString())) * 100)
             if (f.isFile()) {
                 var file = {
                     path: f.path.replace(folder, ""),
@@ -132,12 +176,9 @@ class EpubBuilder {
             }
         }
 
-
         await RNFS.unlink(folder);
         dProgress = ((len / parseFloat(len.toString())) * 100)
         EpubBuilder.onProgress?.(dProgress, epubPath);
-        return new EpubBuilder(EpubFile.load(epubFiles));
+        return await new EpubBuilder(EpubFile.load(epubFiles), folder, RNFS).prepare();
     }
 }
-
-export default EpubBuilder;

@@ -7,7 +7,14 @@ npm install react-native-epub-creator
 ```
 
 ```sh
-// the library best work with react-native-fs but you could use your own library instead.
+// this is importend as the autolink would not work
+// if you dose not install this manyally
+npm install react-native-zip-archive
+```
+
+```sh
+// the library best work with react-native-fs 
+// but you could use any other library instead.
 npm install react-native-fs
 ```
 ### IOS
@@ -33,6 +40,7 @@ import * as RNFS from 'react-native-fs';
    EpubBuilder.onProgress = (progress, file)=> {
       setProgress(progress)
     }
+
      var epub = new EpubBuilder({
       title: "example",
       language: "en",
@@ -50,8 +58,13 @@ import * as RNFS from 'react-native-fs';
         htmlBody: "<p>this is chapter 2</p>"
       }]
     });
+    try{
+      await epub.prepare(); // this will create a temporary folder that will containe the epub files
     
-   var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+      var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+    }catch(error){
+     await epub.discardChanges();
+    }
 ```
 
 ### Read Existing Epub file
@@ -63,7 +76,12 @@ import * as RNFS from 'react-native-fs';
         title: "chapter 3",
         htmlBody: "<p>this is chapter 3</p>"
       });
-  var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+    try{
+      var epubFilePath = await epub.save(RNFS.DownloadDirectoryPath, RNFS);
+    }catch(error){
+     await epub.discardChanges();
+    }
+ 
 ```
 
 ## License
