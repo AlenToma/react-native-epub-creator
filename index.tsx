@@ -161,7 +161,7 @@ export default class EpubBuilder {
     epubPath: path to the epub file
     RNFS: file reader settings best use with react-native-fs eg import * as RNFS from 'react-native-fs', or you could use your own filereder
     */
-    static async loadEpub(epubPath: string, RNFS: FsSettings) {
+    static async loadEpub(epubPath: string, RNFS: FsSettings, localOnProgress?: (progress: number, file: string)=> void) {
         if (!await RNFS.exists(epubPath))
             throw "Epub File could not be found.";
         const folder = getFolderPath(epubPath) + "/" + uuidv4();
@@ -181,12 +181,14 @@ export default class EpubBuilder {
                 } as File
                 epubFiles.push(file);
                 EpubBuilder.onProgress?.(dProgress, epubPath);
+                localOnProgress?.(dProgress, epubPath);
             }
         }
 
         await RNFS.unlink(folder);
         dProgress = ((len / parseFloat(len.toString())) * 100)
         EpubBuilder.onProgress?.(dProgress, epubPath);
+        localOnProgress?.(dProgress, epubPath);
         return await new EpubBuilder(EpubFile.load(epubFiles), folder, RNFS);
     }
 }
