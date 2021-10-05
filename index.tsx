@@ -8,6 +8,12 @@ export type ReadDirItem = {
     isDirectory: () => boolean // Is the file a directory?
 }
 
+export type {
+    File,
+    EpubChapter,
+    EpubSettings
+}
+
 /*
     file reader settings
     best use with react-native-fs
@@ -106,8 +112,9 @@ export default class EpubBuilder {
     /*
     destinationFolderPath: destination to the folder, You could use react-native-fs RNFS.DownloadDirectoryPath
     RNFS: file reader settings best use with react-native-fs eg import * as RNFS from 'react-native-fs', or you could use your own filereder
+    removeTempFile(default true) set to false if there will be other changes to the epub file so it wont have to recreate the temp folder
     */
-    public async save() {
+    public async save(removeTempFile?: boolean) {
         const epub = new EpubFile(this.settings);
         const files = epub.constructEpub();
         const targetPath = `${this.destinationFolderPath}/${this.settings.title}.epub`
@@ -121,9 +128,10 @@ export default class EpubBuilder {
             console.log("unable to delete the existing: " + targetPath)
         }
         await zip(this.tempPath, targetPath);
-        await this.discardChanges();
+        if (removeTempFile !== false)
+             await this.discardChanges();
         this.dProgress = ((len / parseFloat(len.toString())) * 100);
-        EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath)
+        EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath);
         return targetPath;
     }
 
@@ -131,7 +139,7 @@ export default class EpubBuilder {
         var overrideFiles = ["toc.ncx", "toc.html", ".opf"]
         const epub = new EpubFile(this.settings);
         const files = epub.constructEpub();
-        this.tempPath = this.tempPath ?? this.destinationFolderPath + "/" + uuidv4();
+        this.tempPath = this.tempPath ?? (this.destinationFolderPath + "/" + uuidv4());
         await validateDir(this.tempPath, this.RNFS);
         this.dProgress = 0;
         var len = files.length + 1;
@@ -179,6 +187,6 @@ export default class EpubBuilder {
         await RNFS.unlink(folder);
         dProgress = ((len / parseFloat(len.toString())) * 100)
         EpubBuilder.onProgress?.(dProgress, epubPath);
-        return await new EpubBuilder(EpubFile.load(epubFiles), folder, RNFS).prepare();
+        return await new EpubBuilder(EpubFile.load(epubFiles), folder, RNFS);
     }
 }
