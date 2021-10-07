@@ -33,7 +33,7 @@ nothing to do
 
 ### Create and Epub
 ```js
-import EpubBuilder from "react-native-epub-creator";
+import EpubBuilder, { FsSettings, ReadDirItem, EpubChapter, EpubSettings, EpubLoader } from 'react-native-epub-creator';
 // the library best work with react-native-fs but you could use your own library instead
 import * as RNFS from 'react-native-fs';
    const [progress, setProgress] = React.useState(0)
@@ -57,10 +57,7 @@ import * as RNFS from 'react-native-fs';
         htmlBody: "<p>this is chapter 2</p>"
       }]
     }, RNFS.DownloadDirectoryPath, RNFS);
-    try{
-      // this will create a temporary folder that will containe the epub files
-      await epub.prepare(); 
-      
+    try{     
       // save and create the .epub file
       var epubFilePath = await epub.save();
     }catch(error){
@@ -72,7 +69,10 @@ import * as RNFS from 'react-native-fs';
 ### Read an Existing Epub file
 ```js
   var path = RNFS.DownloadDirectoryPath +"/example.epub";
-  var epub = EpubBuilder.loadEpub(path, RNFS);
+  var localProgress=(progress, file)=> {
+
+  })
+  var epub = await EpubLoader(path, RNFS, localProgress);
   // you could add new chapters 
   epub.addChapter({
         title: "chapter 3",
@@ -86,6 +86,53 @@ import * as RNFS from 'react-native-fs';
      await epub.discardChanges();
     }
  
+```
+
+### Create your own File handler
+if you would like to use your own file handler you could just implement `FsSettings` interface
+```ja
+const downloadFileModule = NativeModules.DownloadFileModule;
+class Reader implements FsSettings {
+    async mkdir(filePath: string) {
+        await downloadFileModule.makeDir(filePath);
+    }
+
+    async writeFile(filepath: string, content: string, encodingOrOptions?: any) {
+        await downloadFileModule.write(content, null, null, filepath, false);
+    }
+
+    async unlink(filePath: string) {
+        await downloadFileModule.deleteFile(filePath, true);
+    }
+
+    async exists(filePath: string) {
+        return (await downloadFileModule.exists(filePath)) as boolean;
+    }
+
+    async readFile(filePath: string, encodingOrOptions?: any) {
+        return await downloadFileModule.getFileContent(filePath)
+    }
+
+    async readDir(filePath: string) {
+        try {
+            var str = (await downloadFileModule.getDirInfo(filePath)) as string;
+            var infos = JSON.parse(str) as { path: string, isDirectory: boolean }[];
+            return infos.map(x => {
+                return {
+                    path: x.path,
+                    isDirectory: () => x.isDirectory,
+                    isFile: () => !x.isDirectory
+                } as ReadDirItem
+            });
+        } catch (error) {
+            console.log(error);
+            return [] as ReadDirItem[];
+        }
+    }
+
+}
+
+const RNFS = new Reader();
 ```
 
 ## License
