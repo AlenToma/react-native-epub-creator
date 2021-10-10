@@ -1,5 +1,5 @@
-import { zip, unzip } from 'react-native-zip-archive'
-import EpubFile, { EpubSettings, File, EpubChapter } from 'epub-constructor'
+import { zip, unzip, subscribe, } from 'react-native-zip-archive'
+import EpubFile, { EpubSettings, File, EpubChapter, EpubSettingsLoader, Parameter, EpubJsonSettings, jsonExtractor, bodyExtrator } from 'epub-constructor'
 import { v4 as uuidv4 } from 'uuid';
 
 export type ReadDirItem = {
@@ -11,7 +11,12 @@ export type ReadDirItem = {
 export type {
     File,
     EpubChapter,
-    EpubSettings
+    EpubSettings,
+    Parameter,
+    EpubSettingsLoader,
+    EpubJsonSettings,
+    jsonExtractor,
+    bodyExtrator
 }
 
 /*
@@ -64,9 +69,19 @@ const getFiles = async (folder: string, reader: FsSettings) => {
     return files;
 }
 
-export const EpubLoader = async (epubPath: string, RNFS: FsSettings, localOnProgress?: (progress: number, file: string) => void) => {
+
+
+
+
+export const EpubLoader = async (epubPath: string, RNFS: FsSettings, localOnProgress?: (progress: number, file: string) => void, onEpubExtractionsProgress?: (progress: number, file: string) => void) => {
     if (!await RNFS.exists(epubPath))
         throw "Epub File could not be found.";
+
+    var sub = subscribe(({ progress, filePath }: { progress: number, filePath: string }) => {
+        if (filePath === epubPath) {
+            onEpubExtractionsProgress?.(progress * 100, epubPath);
+        }
+    })
     const destinationFolder = getFolderPath(epubPath)
     const tempFolder = destinationFolder + "/" + uuidv4();
     await validateDir(tempFolder, RNFS);
@@ -75,35 +90,44 @@ export const EpubLoader = async (epubPath: string, RNFS: FsSettings, localOnProg
     const files = await getFiles(tempFolder, RNFS);
     const len = files.length + 1;
     var dProgress = 0;
-    for (var i = 0; i < files.length; i++) {
-        var f = files[i];
-        dProgress = ((i / parseFloat(len.toString())) * 100)
-        if (f.isFile()) {
-            var file = {
-                path: f.path.replace(tempFolder, ""),
-                content: await RNFS.readFile(f.path)
-            } as File
-            epubFiles.push(file);
-            EpubBuilder.onProgress?.(dProgress, epubPath);
-            localOnProgress?.(dProgress, epubPath);
+    const jsonFile = files.find(x => x.path.endsWith(".json"));
+    if (!jsonFile) {
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            dProgress = ((i / parseFloat(len.toString())) * 100)
+            if (f.isFile()) {
+                var file = {
+                    path: f.path.replace(tempFolder, ""),
+                    content: await RNFS.readFile(f.path)
+                } as File
+                epubFiles.push(file);
+                EpubBuilder.onProgress?.(dProgress, epubPath, "Reading");
+                localOnProgress?.(dProgress, epubPath);
+            }
         }
-    }
-
+    } else epubFiles.push({
+        path: jsonFile.path.replace(tempFolder, ""),
+        content: await RNFS.readFile(jsonFile.path)
+    } as File)
+    sub.remove();
     await RNFS.unlink(tempFolder);
     dProgress = ((len / parseFloat(len.toString())) * 100)
-    var item = new EpubBuilder(await EpubFile.load(epubFiles), destinationFolder, RNFS);
-    EpubBuilder.onProgress?.(dProgress, epubPath);
+    var item = new EpubBuilder(await EpubSettingsLoader(epubFiles, (p) => {
+        onEpubExtractionsProgress?.(p, epubPath);
+    }), destinationFolder, RNFS);
+    EpubBuilder.onProgress?.(dProgress, epubPath, "Reading");
     localOnProgress?.(dProgress, epubPath);
     return item
 }
 
 export default class EpubBuilder {
     private settings: EpubSettings;
-    static onProgress?: (progress: number, epubFile: string) => void;
+    static onProgress?: (progress: number, epubFile: string, operation: "constructEpub" | "SaveFile" | "LoadingFile" | "Zip" | "Unzip" | "Reading") => void;
     private destinationFolderPath?: string;
     private tempPath?: string;
     private RNFS: FsSettings;
     private dProgress: number = 0;
+    public onSaveProgress?: (progress: number, epubFile: string, operation: "constructEpub" | "SaveFile") => Promise<void>
 
     /*
     destinationFolderPath: destination to the folder, You could use react-native-fs RNFS.DownloadDirectoryPath
@@ -154,10 +178,9 @@ export default class EpubBuilder {
     removeTempFile(default true) set to false if there will be other changes to the epub file so it wont have to recreate the temp folder
     */
     public async save(removeTempFile?: boolean) {
-        const epub = new EpubFile(this.settings);
-        const files = await epub.constructEpub();
+
         const targetPath = `${this.destinationFolderPath}/${this.settings.title}.epub`
-        var len = files.length + 1;
+
 
         await this.createTempFolder();
         try {
@@ -170,16 +193,17 @@ export default class EpubBuilder {
             await zip(this.tempPath, targetPath);
         if (removeTempFile !== false)
             await this.discardChanges();
-        this.dProgress = ((len / parseFloat(len.toString())) * 100);
-        if (this.destinationFolderPath)
-            EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath);
         return targetPath;
     }
 
     private async createTempFolder() {
-        var overrideFiles = ["toc.ncx", "toc.html", ".opf"]
+        const targetPath = `${this.destinationFolderPath}/${this.settings.title}.epub`
+        var overrideFiles = ["toc.ncx", "toc.html", ".opf", ".json"]
         const epub = new EpubFile(this.settings);
-        const files = await epub.constructEpub();
+        const files = await epub.constructEpub(async (progress) => {
+            if (this.onSaveProgress)
+                await this.onSaveProgress?.(progress, targetPath, "constructEpub")
+        });
         this.tempPath = this.tempPath ?? (this.destinationFolderPath + "/" + uuidv4());
         await validateDir(this.tempPath, this.RNFS);
         this.dProgress = 0;
@@ -194,8 +218,11 @@ export default class EpubBuilder {
                 await validateDir(path, this.RNFS);
             if (!await this.RNFS.exists(path))
                 await this.RNFS.writeFile(path, x.content, "utf8");
-            if (this.destinationFolderPath)
-                EpubBuilder.onProgress?.(this.dProgress, this.destinationFolderPath)
+            if (this.destinationFolderPath) {
+                EpubBuilder.onProgress?.(this.dProgress, targetPath, "SaveFile")
+                if (this.onSaveProgress)
+                    await this.onSaveProgress?.(this.dProgress, targetPath, "SaveFile");
+            }
         }
     }
 
