@@ -33,7 +33,7 @@ nothing to do
 
 ### Create and Epub
 ```js
-import EpubBuilder, { FsSettings, ReadDirItem, EpubChapter, EpubSettings, EpubLoader } from 'react-native-epub-creator';
+import EpubBuilder, { FsSettings, ReadDirItem, EpubChapter, EpubSettings, EpubLoader, getValidFileNameByTitle } from 'react-native-epub-creator';
 // the library best work with react-native-fs but you could use your own library instead
 import * as RNFS from 'react-native-fs';
    const [progress, setProgress] = React.useState(0)
@@ -42,6 +42,7 @@ import * as RNFS from 'react-native-fs';
     }
      var epub = new EpubBuilder({
       title: "example",
+      fileName: getValidFileNameByTitle("examplefile-%1"), // optional, it will take title if not set
       language: "en",
       description: "this is a epub test",
       stylesheet: {
@@ -75,6 +76,7 @@ import * as RNFS from 'react-native-fs';
   var epub = await EpubLoader(path, RNFS, localProgress);
   // you could add new chapters 
   epub.addChapter({
+        fileName: getValidFileNameByTitle("examplefile-%1Chapter1"), // optional, it will take title if not set
         title: "chapter 3",
         htmlBody: "<p>this is chapter 3</p>"
       });
