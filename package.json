@@ -45,7 +45,7 @@
     "lib/"
   ],
   "dependencies": {
-    "epub-constructor": "^1.0.6",
+    "epub-constructor": "^1.0.8",
     "react-native-zip-archive": "^6.0.3",
     "uuid": "^3.4.0"
   }
